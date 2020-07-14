@@ -1,0 +1,6 @@
+numpy
+pandas
+imageio
+matplotlib
+sklearn
+minisom

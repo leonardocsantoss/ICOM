@@ -1,0 +1,8 @@
+venv
+Robocode
+adaline_pares
+gymtests
+pso
+*.pyc
+*pycache*
+.DS_Store
