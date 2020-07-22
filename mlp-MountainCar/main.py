@@ -40,8 +40,8 @@ def model_data_preparation(tests_count=10000):
 def build_model(input_size, output_size):
     print('Init build_model...')
     model = Sequential()
-    model.add(Dense(128, input_dim=input_size, activation='relu'))
-    model.add(Dense(52, activation='relu'))
+    model.add(Dense(128, input_dim=input_size, activation='sigmoid'))
+    model.add(Dense(52, activation='sigmoid'))
     model.add(Dense(output_size, activation='linear'))
     model.compile(loss='mse', optimizer=Adam())
     return model
