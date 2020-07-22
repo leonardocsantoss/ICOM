@@ -1,5 +1,7 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import numpy as np
+
+tf.disable_v2_behavior()
 
 class MLP2Layers():
     def __init__(self, learning_rate=0.01, training_epochs=5000, n_input=4, n_hidden=10, n_output=3):
@@ -58,6 +60,6 @@ class MLP2Layers():
         print("accuracy:", accuracy.eval({self.X: test_X, self.Y: test_Y}, session=self.sess))
     
     def test(self, test_X, test_Y):
-            test_result = self.sess.run(self.pred, feed_dict = {self.X: test_X})
-            correct_prediction = tf.equal(tf.argmax(test_result, 1), tf.argmax(test_Y, 1))
-            return correct_prediction.eval(session=self.sess)
+        test_result = self.sess.run(self.pred, feed_dict = {self.X: test_X})
+        correct_prediction = tf.equal(tf.argmax(test_result, 1), tf.argmax(test_Y, 1))
+        return correct_prediction.eval(session=self.sess)

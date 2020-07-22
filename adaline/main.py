@@ -6,7 +6,7 @@ from adaline import Adaline
 
 ### Dados de Treinamento
 # Um exemplo de rede Adaline para separar duas classes de flores Iris (Setosa e Versicolor) os dados para treinamento consistem em apenas 5 colunas (comprimento da pétala, largura da pétala, comprimento da sépala e largura da sépala, a última coluna é a classe da flor) e 35 amostras (linhas).
-df = pd.read_csv('adaline/Dados_Treinamento_Sinal.csv', header=None)
+df = pd.read_csv('Dados_Treinamento_Sinal.csv', header=None)
 df.head()
 
 x = df.iloc[0:35,[0,1,2,3]].values
