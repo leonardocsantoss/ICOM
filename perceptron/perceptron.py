@@ -1,6 +1,6 @@
 import numpy as np
 
-class Perceptron(object):
+class Perceptron:
 
   def __init__(self, no_of_inputs, ephocas=100, learning_rate=0.01):
     self.ephocas = ephocas # Número de interacões
