@@ -6,6 +6,7 @@ from tensorflow.keras.layers import Layer
 from tensorflow.keras.initializers import RandomUniform, Initializer, Constant
 from sklearn.cluster import KMeans
 
+
 class InitCentersRandom(Initializer):
     """ Initializer for initialization of centers of RBF network
         as random samples from the given data set.
