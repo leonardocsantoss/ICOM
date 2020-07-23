@@ -1,101 +1,113 @@
+# https://github.com/PetraVidnerova/rbf_for_tf2
+import tensorflow as tf
 import numpy as np
-from time import time
 
-class RBF(object):
-    """Implementation of a Radial Basis Function Network"""
+from tensorflow.keras.layers import Layer
+from tensorflow.keras.initializers import RandomUniform, Initializer, Constant
+from sklearn.cluster import KMeans
 
-    def __init__(self, k=2, learning_rate=0.01, epochs=100, inferStds=True):
-        self.k = k # Número de neurônios
-        self.learning_rate = learning_rate # Taxa de aprendizado
-        self.epochs = epochs # Epocas
-        self.inferStds = inferStds # Se infere o desvio padr
-        self.w = np.random.randn(k) # Pesos
-        self.b = np.random.randn(1) # Bias
+class InitCentersRandom(Initializer):
+    """ Initializer for initialization of centers of RBF network
+        as random samples from the given data set.
+    # Arguments
+        X: matrix, dataset to choose the centers from (random rows
+          are taken as centers)
+    """
 
-    def rbf(self, x, c, s):
-        return np.exp(-1 / (2 * s**2) * (x-c)**2)
+    def __init__(self, X):
+        self.X = X
+        super().__init__()
 
-    def kmeans(self, X, k):
-        """Performs k-means clustering for 1D input
-        Arguments:
-            X {ndarray} -- A Mx1 array of inputs
-            k {int} -- Number of clusters
-        
-        Returns:
-            ndarray -- A kx1 array of final cluster centers
-        """
-        # randomly select initial clusters from input data
-        clusters = np.random.choice(np.squeeze(X), size=k)
-        prevClusters = clusters.copy()
-        stds = np.zeros(k)
-        converged = False
-    
-        while not converged:
-            """
-            compute distances for each cluster center to each point 
-            where (distances[i, j] represents the distance between the ith point and jth cluster)
-            """
-            distances = np.squeeze(np.abs(X[:, np.newaxis] - clusters[np.newaxis, :]))
-            # find the cluster that's closest to each point
-            closestCluster = np.argmin(distances, axis=1)
-            # update clusters by taking the mean of all of the points assigned to that cluster
-            for i in range(k):
-                pointsForCluster = X[closestCluster == i]
-                if len(pointsForCluster) > 0:
-                    clusters[i] = np.mean(pointsForCluster, axis=0)
-            # converge if clusters haven't moved
-            converged = np.linalg.norm(clusters - prevClusters) < 1e-6
-            prevClusters = clusters.copy()
-        distances = np.squeeze(np.abs(X[:, np.newaxis] - clusters[np.newaxis, :]))
-        closestCluster = np.argmin(distances, axis=1)
-        clustersWithNoPoints = []
-        for i in range(k):
-            pointsForCluster = X[closestCluster == i]
-            if len(pointsForCluster) < 2:
-                # keep track of clusters with no points or 1 point
-                clustersWithNoPoints.append(i)
-                continue
-            else:
-                stds[i] = np.std(X[closestCluster == i])
-        # if there are clusters with 0 or 1 points, take the mean std of the other clusters
-        if len(clustersWithNoPoints) > 0:
-            pointsToAverage = []
-            for i in range(k):
-                if i not in clustersWithNoPoints:
-                    pointsToAverage.append(X[closestCluster == i])
-            pointsToAverage = np.concatenate(pointsToAverage).ravel()
-            stds[clustersWithNoPoints] = np.mean(np.std(pointsToAverage))
-        return clusters, stds
+    def __call__(self, shape, dtype=None):
+        assert shape[1:] == self.X.shape[1:]  # check dimension
 
-    def train(self, X, y):
-        ini = time()
-        if self.inferStds:
-            # compute stds from data
-            self.centers, self.stds = self.kmeans(X, self.k)
+        # np.random.randint returns ints from [low, high) !
+        idx = np.random.randint(self.X.shape[0], size=shape[0])
+
+        return self.X[idx, :]
+
+
+class InitCentersKMeans(Initializer):
+    """ Initializer for initialization of centers of RBF network
+        by clustering the given data set.
+    # Arguments
+        X: matrix, dataset
+    """
+
+    def __init__(self, X, max_iter=100):
+        self.X = X
+        self.max_iter = max_iter
+        super().__init__()
+
+    def __call__(self, shape, dtype=None):
+        assert shape[1:] == self.X.shape[1:]
+
+        n_centers = shape[0]
+        km = KMeans(n_clusters=n_centers, max_iter=self.max_iter, verbose=0)
+        km.fit(self.X)
+        return km.cluster_centers_
+
+
+class RBFLayer(Layer):
+    """ Layer of Gaussian RBF units.
+    # Example
+    ```python
+        model = Sequential()
+        model.add(RBFLayer(10,
+                           initializer=InitCentersRandom(X),
+                           betas=1.0,
+                           input_shape=(1,)))
+        model.add(Dense(1))
+    ```
+    # Arguments
+        output_dim: number of hidden units (i.e. number of outputs of the
+                    layer)
+        initializer: instance of initiliazer to initialize centers
+        betas: float, initial value for betas
+    """
+
+    def __init__(self, output_dim, initializer=None, betas=1.0, **kwargs):
+
+        self.output_dim = output_dim
+
+        # betas is either initializer object or float
+        if isinstance(betas, Initializer):
+            self.betas_initializer = betas
         else:
-            # use a fixed std 
-            self.centers, _ = self.kmeans(X, self.k)
-            dMax = max([np.abs(c1 - c2) for c1 in self.centers for c2 in self.centers])
-            self.stds = np.repeat(dMax / np.sqrt(2*self.k), self.k)
-     
-        # training
-        for epoch in range(self.epochs):
-            for i in range(X.shape[0]):
-                # forward pass
-                a = np.array([self.rbf(X[i], c, s) for c, s, in zip(self.centers, self.stds)])
-                F = a.T.dot(self.w) + self.b
-                loss = (y[i] - F).flatten() ** 2
-                # backward pass
-                error = -(y[i] - F).flatten()
-                # online update
-                self.w = self.w - self.learning_rate * a * error
-                self.b = self.b - self.learning_rate * error
-        print("Optimization Finished: %.2fs" % (time()-ini))
+            self.betas_initializer = Constant(value=betas)
 
-    def predict(self, X):
-        y_pred = []
-        for i in range(X.shape[0]):
-            a = np.array([self.rbf(X[i], c, s) for c, s, in zip(self.centers, self.stds)])
-            F = a.T.dot(self.w) + self.b
-            y_pred.append(F)
-        return np.array(y_pred)
+        self.initializer = initializer if initializer else RandomUniform(
+            0.0, 1.0)
+
+        super().__init__(**kwargs)
+
+    def build(self, input_shape):
+
+        self.centers = self.add_weight(name='centers',
+                                       shape=(self.output_dim, input_shape[1]),
+                                       initializer=self.initializer,
+                                       trainable=True)
+        self.betas = self.add_weight(name='betas',
+                                     shape=(self.output_dim,),
+                                     initializer=self.betas_initializer,
+                                     # initializer='ones',
+                                     trainable=True)
+
+        super().build(input_shape)
+
+    def call(self, x):
+
+        C = tf.expand_dims(self.centers, -1)  # inserts a dimension of 1
+        H = tf.transpose(C-tf.transpose(x))  # matrix of differences
+        return tf.exp(-self.betas * tf.math.reduce_sum(H**2, axis=1))
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.output_dim)
+
+    def get_config(self):
+        # have to define get_config to be able to use model_from_json
+        config = {
+            'output_dim': self.output_dim
+        }
+        base_config = super().get_config()
+        return dict(list(base_config.items()) + list(config.items()))
