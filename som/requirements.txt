@@ -1,6 +1,6 @@
-numpy
-pandas
-imageio
-matplotlib
+numpy==1.19.1
+matplotlib==3.3.0
+pandas==1.0.5
+imageio==2.9.0
+minisom==2.2.6
 sklearn
-minisom
