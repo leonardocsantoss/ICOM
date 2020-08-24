@@ -12,11 +12,11 @@ class Individual:
     def cal_fitness(self): 
         ''' 
         Calcula o fittness score.
-        O valor representa o número de caracteres errados.
+        O valor representa o número de caracteres corretos.
         '''
         fitness = 0
         for gs, gt in zip(self.chromosome, self.TARGET): 
-            if gs != gt: fitness+= 1
+            if gs == gt: fitness+= 1
         return fitness 
 
 
@@ -54,14 +54,14 @@ class AG:
         return [self._mutated_genes() for i in range(gnome_len)] 
 
 
-    def mate(self, part1, par2): 
+    def mate(self, part1, part2): 
         ''' 
         Realiza o crossover/mutação e gera um novo indivíduo .
         '''
   
         # Cromossomos do filho
         child_chromosome = [] 
-        for gp1, gp2 in zip(part1.chromosome, par2.chromosome):     
+        for gp1, gp2 in zip(part1.chromosome, part2.chromosome):     
   
             # Probabilidade
             prob = random.random() 
@@ -83,9 +83,9 @@ class AG:
         while True:
             ## 2.1 Verifica se convergiu
             # Ordena a população pelo fitness score
-            self.population = sorted(self.population, key = lambda x:x.fitness) 
+            self.population = sorted(self.population, key = lambda x:x.fitness, reverse=True) 
             # Se um indivíduo convergir finaliza o processo
-            if self.population[0].fitness <= 0:
+            if ''.join(self.population[0].chromosome) == self.TARGET:
                 break
 
             ## 2.2 Gera uma nova população 
@@ -95,7 +95,7 @@ class AG:
             s = int((10*self.POPULATION_SIZE)/100) 
             new_generation.extend(self.population[:s]) 
 
-            # 50% da população irá cruzar gerando novos filhos
+            # 50% da população irá cruzar gerando 90% dos novos filhos
             s = int((90*self.POPULATION_SIZE)/100) 
             for _ in range(s): 
                 parent1 = random.choice(self.population[:50]) 

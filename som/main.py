@@ -32,7 +32,7 @@ X = democracy_index[['democracy_index', 'electoral_processand_pluralism', 'funct
 X = scale(X)
 
 # Definindo um SOM 15x15
-size = 15
+size = 100
 som = MiniSom(size, size, len(X[0]),
               neighborhood_function='gaussian', sigma=1.5,
               learning_rate=0.5, random_seed=1)
